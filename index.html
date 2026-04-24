@@ -137,6 +137,21 @@
   #hexDetail .hd-bian-item{display:inline-block;margin:2px 4px 2px 0;padding:2px 8px;font-size:11px;border-radius:10px;background:rgba(127,216,255,.08);border:1px solid rgba(127,216,255,.2);color:#7fd8ff;cursor:default}
   #hexDetail::-webkit-scrollbar{width:6px}
   #hexDetail::-webkit-scrollbar-thumb{background:rgba(51,204,255,.3);border-radius:3px}
+  /* ===== 节气时间信息弹窗 ===== */
+  #solarTermPopup{position:fixed;z-index:10005;display:none;min-width:240px;max-width:340px;padding:0;background:rgba(10,10,20,.92);backdrop-filter:blur(14px) saturate(160%);-webkit-backdrop-filter:blur(14px) saturate(160%);border:1px solid rgba(255,225,122,.5);border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.7),0 0 30px rgba(255,200,90,.15);font-family:"Microsoft YaHei","PingFang SC",sans-serif;color:#f0f0f5;overflow:hidden;animation:stPopIn .25s ease}
+  @keyframes stPopIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:none}}
+  #solarTermPopup .stp-head{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid rgba(255,225,122,.2);background:linear-gradient(180deg,rgba(255,225,122,.12),transparent);cursor:move;user-select:none}
+  #solarTermPopup .stp-title{font-size:15px;font-weight:bold;color:#ffe17a;letter-spacing:1px}
+  #solarTermPopup .stp-close{background:none;border:none;color:#bcbcd0;font-size:18px;cursor:pointer;line-height:1;padding:0 4px}
+  #solarTermPopup .stp-close:hover{color:#ffe17a}
+  #solarTermPopup .stp-body{padding:12px 14px 14px}
+  #solarTermPopup .stp-row{display:flex;align-items:baseline;gap:8px;margin:6px 0;font-size:13px;line-height:1.6}
+  #solarTermPopup .stp-label{color:#9aa0b4;min-width:56px;flex-shrink:0;font-size:12px}
+  #solarTermPopup .stp-val{color:#e8e8ef;font-weight:bold}
+  #solarTermPopup .stp-val.gold{color:#ffe17a}
+  #solarTermPopup .stp-val.blue{color:#7fd8ff}
+  #solarTermPopup .stp-desc{margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.08);font-size:12px;color:#bcbcd0;line-height:1.5;font-style:italic}
+  .solar-term-label{color:#a8c8ff;font-size:9px;padding:1px 4px;background:rgba(20,30,60,.5);border:1px solid rgba(168,200,255,.3);border-radius:6px;text-shadow:0 0 3px rgba(100,160,255,.5);font-family:"Microsoft YaHei",serif;white-space:nowrap}
 
   /* ===== 移动端适配 ===== */
   @media (max-width: 768px){
@@ -297,6 +312,13 @@
     <button class="hd-close" type="button" title="收起">✕</button>
   </div>
   <div class="hd-body" id="hdBody"></div>
+</div>
+<div id="solarTermPopup">
+  <div class="stp-head">
+    <span class="stp-title">天时节气</span>
+    <button class="stp-close" type="button" title="关闭">×</button>
+  </div>
+  <div class="stp-body" id="stpBody"></div>
 </div>
 <div id="tooltip"></div>
 <div id="mobileTip">双击卦象查看详情 · 拖动旋转 · 双指缩放</div>
@@ -852,6 +874,82 @@ nodes.forEach(n=>{
 /* 十二消息卦(月令)闭合曲线: 复→临→泰→大壮→夬→乾→姤→遯→否→观→剥→坤→复 */
 const MONTH_SEQ = [24,19,11,34,43,1,44,33,12,20,23,2];
 const MONTH_NAMES = ['冬至·子(十一月)','丑(十二月)','寅(正月)','卯(二月)','辰(三月)','巳(四月)','午(五月)','未(六月)','申(七月)','酉(八月)','戌(九月)','亥(十月)'];
+
+/* ===== 二十四节气 ===== */
+const SOLAR_TERMS = [
+  {name:'冬至', month:12, day:22, monthIdx:0,  type:'气', desc:'阳气初生，白昼渐长，一阳复始'},
+  {name:'小寒', month:1,  day:6,  monthIdx:0,  type:'节', desc:'寒气渐重，但未至极点'},
+  {name:'大寒', month:1,  day:20, monthIdx:1,  type:'气', desc:'一年中最寒冷的时节'},
+  {name:'立春', month:2,  day:4,  monthIdx:1,  type:'节', desc:'春季开始，万物复苏'},
+  {name:'雨水', month:2,  day:19, monthIdx:2,  type:'气', desc:'降水增多，气温回升'},
+  {name:'惊蛰', month:3,  day:6,  monthIdx:2,  type:'节', desc:'春雷乍响，蛰虫始出'},
+  {name:'春分', month:3,  day:21, monthIdx:3,  type:'气', desc:'昼夜等长，阴阳平衡'},
+  {name:'清明', month:4,  day:5,  monthIdx:3,  type:'节', desc:'天清地明，万物显现'},
+  {name:'谷雨', month:4,  day:20, monthIdx:4,  type:'气', desc:'雨生百谷，春播时节'},
+  {name:'立夏', month:5,  day:6,  monthIdx:4,  type:'节', desc:'夏季开始，万物茂盛'},
+  {name:'小满', month:5,  day:21, monthIdx:5,  type:'气', desc:'麦类等作物籽粒初满'},
+  {name:'芒种', month:6,  day:6,  monthIdx:5,  type:'节', desc:'忙种忙收，仲夏之始'},
+  {name:'夏至', month:6,  day:21, monthIdx:6,  type:'气', desc:'阳气至极，白昼最长，一阴初生'},
+  {name:'小暑', month:7,  day:7,  monthIdx:6,  type:'节', desc:'暑气渐盛，尚未至极'},
+  {name:'大暑', month:7,  day:23, monthIdx:7,  type:'气', desc:'一年中最炎热的时节'},
+  {name:'立秋', month:8,  day:7,  monthIdx:7,  type:'节', desc:'秋季开始，暑去凉来'},
+  {name:'处暑', month:8,  day:23, monthIdx:8,  type:'气', desc:'暑气消退，秋意渐浓'},
+  {name:'白露', month:9,  day:8,  monthIdx:8,  type:'节', desc:'天气转凉，露水凝白'},
+  {name:'秋分', month:9,  day:23, monthIdx:9,  type:'气', desc:'昼夜等长，秋色平分'},
+  {name:'寒露', month:10, day:8,  monthIdx:9,  type:'节', desc:'露水寒冷，将要结霜'},
+  {name:'霜降', month:10, day:23, monthIdx:10, type:'气', desc:'天气渐寒，初霜出现'},
+  {name:'立冬', month:11, day:7,  monthIdx:10, type:'节', desc:'冬季开始，万物收藏'},
+  {name:'小雪', month:11, day:22, monthIdx:11, type:'气', desc:'气温下降，初雪降临'},
+  {name:'大雪', month:12, day:7,  monthIdx:11, type:'节', desc:'降雪增多，天寒地冻'},
+];
+const SOLAR_TERM_WUXING = {
+  '冬至':'水','小寒':'水','大寒':'水','立春':'木','雨水':'木','惊蛰':'木',
+  '春分':'木','清明':'木','谷雨':'木','立夏':'火','小满':'火','芒种':'火',
+  '夏至':'火','小暑':'火','大暑':'火','立秋':'金','处暑':'金','白露':'金',
+  '秋分':'金','寒露':'金','霜降':'金','立冬':'水','小雪':'水','大雪':'水'
+};
+const SHICHEN = [
+  {name:'子', alias:'夜半', range:'23:00-01:00'},
+  {name:'丑', alias:'鸡鸣', range:'01:00-03:00'},
+  {name:'寅', alias:'平旦', range:'03:00-05:00'},
+  {name:'卯', alias:'日出', range:'05:00-07:00'},
+  {name:'辰', alias:'食时', range:'07:00-09:00'},
+  {name:'巳', alias:'隅中', range:'09:00-11:00'},
+  {name:'午', alias:'日中', range:'11:00-13:00'},
+  {name:'未', alias:'日昳', range:'13:00-15:00'},
+  {name:'申', alias:'哺时', range:'15:00-17:00'},
+  {name:'酉', alias:'日入', range:'17:00-19:00'},
+  {name:'戌', alias:'黄昏', range:'19:00-21:00'},
+  {name:'亥', alias:'人定', range:'21:00-23:00'},
+];
+function getShichen(date){ const h = date.getHours(); const idx = Math.floor(((h + 1) % 24) / 2); return SHICHEN[idx]; }
+function getSolarCurveT(date){
+  const y = date.getFullYear();
+  const dongzhiThis = new Date(y, 11, 22);
+  const dongzhiPrev = new Date(y-1, 11, 22);
+  const ref = (date >= dongzhiThis) ? dongzhiThis : dongzhiPrev;
+  const nextRef = (date >= dongzhiThis) ? new Date(y+1, 11, 22) : dongzhiThis;
+  const elapsed = (date - ref) / (1000*60*60*24);
+  const total = (nextRef - ref) / (1000*60*60*24);
+  return Math.max(0, Math.min(0.9999, elapsed / total));
+}
+function getCurrentSolarTerm(date){
+  const t = getSolarCurveT(date);
+  const idx = Math.floor(t * 24);
+  const frac = t * 24 - idx;
+  const current = SOLAR_TERMS[idx % 24];
+  const next = SOLAR_TERMS[(idx + 1) % 24];
+  const y = date.getFullYear();
+  let nextDate = new Date(y, next.month - 1, next.day);
+  if(nextDate <= date) nextDate = new Date(y + 1, next.month - 1, next.day);
+  const daysToNext = Math.ceil((nextDate - date) / (1000*60*60*24));
+  return { current, next, idx, frac, daysToNext, curveT: t };
+}
+let solarNowMarker = null;
+let solarNowGlow = null;
+let solarTermDots = [];
+let solarTermLabels = [];
+
 const monthGroup = new THREE.Group(); scene.add(monthGroup); monthGroup.visible=true;
 let monthPulse = null;
 let monthSegments = [];  // 月令线分段: [{core, halo, mid, idx}]
@@ -1034,6 +1132,66 @@ class _SphericalCurve extends THREE.Curve {
     _monthLabels.push({ obj, el: div });
   });
   window._monthLabels = _monthLabels;  // 暴露给 updateLabels 使用
+
+  // ======= 二十四节气标记点 =======
+  solarTermDots = [];
+  solarTermLabels = [];
+  for(let i = 0; i < 24; i++){
+    const st = SOLAR_TERMS[i];
+    const t = i / 24;
+    const pos = curve.getPointAt(t);
+    const out = pos.clone().normalize();
+    const dotG = new THREE.SphereGeometry(0.12, 8, 6);
+    const dotM = new THREE.MeshBasicMaterial({
+      color: st.type === '气' ? 0x7fd8ff : 0xa8c8ff,
+      transparent: true, opacity: 0.75,
+      blending: THREE.AdditiveBlending, depthWrite: false
+    });
+    const dot = new THREE.Mesh(dotG, dotM);
+    dot.position.copy(pos).addScaledVector(out, 0.15);
+    dot.userData.solarTermIdx = i;
+    monthGroup.add(dot);
+    solarTermDots.push(dot);
+    const div = document.createElement('div');
+    div.className = 'solar-term-label';
+    div.textContent = st.name;
+    const lbl = new CSS2DObject(div);
+    lbl.position.copy(pos).addScaledVector(out, 0.9);
+    monthGroup.add(lbl);
+    solarTermLabels.push({ obj: lbl, el: div });
+  }
+
+  // ======= "当前时间" 闪烁高亮球 =======
+  const nowT = getSolarCurveT(new Date());
+  const nowPos = curve.getPointAt(nowT);
+  const nowOut = nowPos.clone().normalize();
+  const nowG = new THREE.SphereGeometry(0.32, 16, 12);
+  const nowM = new THREE.MeshBasicMaterial({
+    color: 0xffffff, transparent: true, opacity: 1.0,
+    blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false
+  });
+  solarNowMarker = new THREE.Mesh(nowG, nowM);
+  solarNowMarker.position.copy(nowPos).addScaledVector(nowOut, 0.2);
+  solarNowMarker.renderOrder = 1300;
+  monthGroup.add(solarNowMarker);
+  const glowG = new THREE.SphereGeometry(0.6, 16, 12);
+  const glowM = new THREE.MeshBasicMaterial({
+    color: 0xffe17a, transparent: true, opacity: 0.3,
+    blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false
+  });
+  solarNowGlow = new THREE.Mesh(glowG, glowM);
+  solarNowGlow.position.copy(solarNowMarker.position);
+  solarNowGlow.renderOrder = 1299;
+  monthGroup.add(solarNowGlow);
+  const nowDiv = document.createElement('div');
+  nowDiv.style.cssText = 'color:#fff;font-size:11px;font-weight:bold;padding:2px 8px;background:rgba(255,200,90,.35);border:1px solid rgba(255,225,122,.7);border-radius:10px;text-shadow:0 0 6px #ffe17a;font-family:"Microsoft YaHei",serif;white-space:nowrap;cursor:pointer';
+  const stInfo = getCurrentSolarTerm(new Date());
+  nowDiv.textContent = '今 · ' + stInfo.current.name;
+  const nowLabel = new CSS2DObject(nowDiv);
+  nowLabel.position.copy(solarNowMarker.position).addScaledVector(nowOut, 1.0);
+  monthGroup.add(nowLabel);
+  window._solarNowLabel = { obj: nowLabel, el: nowDiv };
+  nowDiv.addEventListener('click', e => { e.stopPropagation(); showSolarTermPopup(e); });
 })();
 
 /* 高亮某卦的变爻路径 */
@@ -1057,6 +1215,70 @@ function highlight(node){
   const s = new THREE.Mesh(sg,sm); s.position.copy(node.pos);
   highlightGroup.add(s);
 }
+
+/* ========= 节气弹窗交互 ========= */
+const stPopup = document.getElementById('solarTermPopup');
+const stpBody = document.getElementById('stpBody');
+const stpCloseBtn = stPopup.querySelector('.stp-close');
+const stpHead = stPopup.querySelector('.stp-head');
+function closeStPopup(){ stPopup.style.display = 'none'; }
+stpCloseBtn.addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); closeStPopup(); });
+stpCloseBtn.addEventListener('click', e => { e.stopPropagation(); });
+let _stDrag = false, _stDx = 0, _stDy = 0;
+stpHead.addEventListener('pointerdown', e => {
+  if(e.target.closest('.stp-close')) return;
+  _stDrag = true;
+  const r = stPopup.getBoundingClientRect();
+  _stDx = e.clientX - r.left; _stDy = e.clientY - r.top;
+  stpHead.setPointerCapture(e.pointerId);
+});
+stpHead.addEventListener('pointermove', e => {
+  if(!_stDrag) return;
+  const x = Math.max(0, Math.min(innerWidth - 60, e.clientX - _stDx));
+  const y = Math.max(0, Math.min(innerHeight - 40, e.clientY - _stDy));
+  stPopup.style.left = x + 'px'; stPopup.style.top = y + 'px';
+  stPopup.style.right = 'auto'; stPopup.style.bottom = 'auto';
+});
+stpHead.addEventListener('pointerup', e => { _stDrag = false; try{ stpHead.releasePointerCapture(e.pointerId); }catch(_){} });
+stpHead.addEventListener('pointercancel', () => { _stDrag = false; });
+
+function showSolarTermPopup(e){
+  const now = new Date();
+  const sc = getShichen(now);
+  const si = getCurrentSolarTerm(now);
+  const monthHex = numToNode[MONTH_SEQ[si.current.monthIdx]];
+  const wx = SOLAR_TERM_WUXING[si.current.name] || '';
+  const timeStr = now.toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false});
+  const dateStr = now.getFullYear()+'年'+(now.getMonth()+1)+'月'+now.getDate()+'日';
+  const weekDay = ['日','一','二','三','四','五','六'][now.getDay()];
+  stpBody.innerHTML =
+    '<div class="stp-row"><span class="stp-label">公历</span><span class="stp-val">'+dateStr+' 星期'+weekDay+'</span></div>'+
+    '<div class="stp-row"><span class="stp-label">时间</span><span class="stp-val gold" style="font-size:18px;letter-spacing:2px">'+timeStr+'</span></div>'+
+    '<div class="stp-row"><span class="stp-label">时辰</span><span class="stp-val gold">'+sc.name+'时 · '+sc.alias+'</span><span style="color:#9aa0b4;font-size:11px">('+sc.range+')</span></div>'+
+    '<div class="stp-row"><span class="stp-label">当前节气</span><span class="stp-val gold" style="font-size:16px">'+si.current.name+'</span><span style="color:#7fd8ff;font-size:11px;margin-left:4px">'+si.current.type+'</span></div>'+
+    '<div class="stp-row"><span class="stp-label">下一节气</span><span class="stp-val blue">'+si.next.name+'</span><span style="color:#9aa0b4;font-size:11px;margin-left:4px">约'+si.daysToNext+'天后</span></div>'+
+    '<div class="stp-row"><span class="stp-label">月令卦</span><span class="stp-val">'+(HEX_SYMBOL[monthHex.num]||'')+' '+monthHex.name+' · 第'+monthHex.num+'卦</span></div>'+
+    '<div class="stp-row"><span class="stp-label">五行</span><span class="stp-val">'+wx+'</span></div>'+
+    '<div class="stp-desc">'+si.current.desc+'</div>';
+  stPopup.style.display = 'block';
+  const pw = stPopup.offsetWidth, ph = stPopup.offsetHeight;
+  let x = (e && e.clientX) || (innerWidth / 2);
+  let y = (e && e.clientY) || (innerHeight / 2);
+  x = Math.min(x, innerWidth - pw - 12);
+  y = Math.min(y, innerHeight - ph - 12);
+  if(x < 12) x = 12; if(y < 12) y = 12;
+  stPopup.style.left = x + 'px'; stPopup.style.top = y + 'px';
+  stPopup.style.right = 'auto'; stPopup.style.bottom = 'auto';
+}
+setInterval(() => {
+  if(stPopup.style.display === 'block'){
+    const timeEl = stpBody.querySelector('.stp-val.gold');
+    if(timeEl){
+      const now = new Date();
+      timeEl.textContent = now.toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false});
+    }
+  }
+}, 1000);
 
 /* ========= 交互 ========= */
 const ray = new THREE.Raycaster();
@@ -1133,6 +1355,18 @@ function setHotLabel(node){
   renderer.domElement.addEventListener('pointerup', e => {
     // 忽略拖动旋转（移动超过 8px 视为拖动而非点击）
     if(Math.abs(e.clientX-startX)>8 || Math.abs(e.clientY-startY)>8) return;
+    // 先检测是否点击了"当前时间"闪烁球
+    if(solarNowMarker && monthGroup.visible){
+      mouse.x = (e.clientX/innerWidth)*2-1;
+      mouse.y = -(e.clientY/innerHeight)*2+1;
+      ray.setFromCamera(mouse, camera);
+      const hits = ray.intersectObject(solarNowMarker, false);
+      if(hits.length > 0){ showSolarTermPopup(e); return; }
+      if(solarNowGlow){
+        const gh = ray.intersectObject(solarNowGlow, false);
+        if(gh.length > 0){ showSolarTermPopup(e); return; }
+      }
+    }
     const node = pickNode(e);
     if(!node) return;
     if(!isMobile){
@@ -1774,6 +2008,18 @@ function animate(){
   // 月令光晕脉动
   if(monthPulse && monthGroup.visible){
     monthPulse.opacity = 0.22 + 0.22*(0.5+0.5*Math.sin(now*1.8));
+  }
+  // "当前时间" 闪烁球动画
+  if(solarNowMarker && monthGroup.visible){
+    const pulse = 0.6 + 0.4 * Math.sin(now * 3.0);
+    solarNowMarker.material.opacity = pulse;
+    const colorMix = 0.5 + 0.5 * Math.sin(now * 1.5);
+    solarNowMarker.material.color.setRGB(1.0, 0.85 + 0.15 * colorMix, 0.5 + 0.5 * colorMix);
+    if(solarNowGlow){
+      solarNowGlow.material.opacity = 0.15 + 0.2 * Math.sin(now * 2.0);
+      const s = 1.0 + 0.15 * Math.sin(now * 2.5);
+      solarNowGlow.scale.setScalar(s);
+    }
   }
   if(motion.mode !== 'off') updateMotion(now);
   renderer.render(scene,camera);
