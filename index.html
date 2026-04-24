@@ -2162,7 +2162,13 @@ console.log('卦象分布:', nodes.map(n=>`${n.num} ${n.name} k=${n.k} ${n.onAxi
   let imgPanelOpen = false;
   close.addEventListener('click', () => {
     panel.classList.add('collapsed');
-    setTimeout(()=>{ panel.style.display='none'; panel.classList.remove('on','collapsed'); imgToggle.style.display='flex'; imgPanelOpen=false; },200);
+    setTimeout(()=>{
+      panel.style.display='none';
+      panel.style.left=''; panel.style.top=''; panel.style.right=''; panel.style.bottom='';
+      panel.classList.remove('on','collapsed');
+      imgToggle.style.display='flex';
+      imgPanelOpen=false;
+    },200);
   });
   imgToggle.addEventListener('click', () => {
     imgToggle.style.display='none';

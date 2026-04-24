@@ -153,7 +153,12 @@
   // === Toggle ===
   closeBtn.addEventListener('click', function(){
     panel.classList.add('collapsed');
-    setTimeout(function(){ panel.style.display='none'; panel.classList.remove('on','collapsed'); toggle.style.display='flex'; },200);
+    setTimeout(function(){
+      panel.style.display='none';
+      panel.style.left=''; panel.style.top=''; panel.style.right=''; panel.style.bottom='';
+      panel.classList.remove('on','collapsed');
+      toggle.style.display='flex';
+    },200);
   });
   toggle.addEventListener('click', function(){
     toggle.style.display='none';
