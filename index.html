@@ -1815,16 +1815,34 @@ function buildEnlightenWaypoints(){
 }
 
 function buildHelixWaypoints(){
-  // 从南极到北极, 均匀球面螺旋 (4 圈)
-  const pts = [];
+  // 升龙螺旋: 64主点 + 球面 slerp 加密
+  const LIFT = 1.06;
+  const r = R * LIFT;
   const turns = 4;
-  const N = 240;
-  for(let i=0;i<=N;i++){
-    const u = i/N;
+  const KEY = 64, SUB = 8;
+  const keyPts = [];
+  for(let i=0;i<=KEY;i++){
+    const u = i/KEY;
     const lat = -Math.PI/2 + u*Math.PI;
     const lon = u*Math.PI*2*turns;
-    const r = R*1.08;
-    pts.push(new THREE.Vector3(r*Math.cos(lat)*Math.cos(lon), r*Math.sin(lat), r*Math.cos(lat)*Math.sin(lon)));
+    keyPts.push(new THREE.Vector3(r*Math.cos(lat)*Math.cos(lon), r*Math.sin(lat), r*Math.cos(lat)*Math.sin(lon)));
+  }
+  const pts = [];
+  for(let i=0;i<keyPts.length-1;i++){
+    const a = keyPts[i].clone().normalize();
+    const b = keyPts[i+1].clone().normalize();
+    const dot = Math.max(-1, Math.min(1, a.dot(b)));
+    const omega = Math.acos(dot);
+    if(omega < 1e-5){ if(i===0) pts.push(keyPts[i].clone()); continue; }
+    const sinO = Math.sin(omega);
+    const from = (i===0) ? 0 : 1;
+    for(let j=from;j<=SUB;j++){
+      const t = j/SUB;
+      const s1 = Math.sin((1-t)*omega)/sinO;
+      const s2 = Math.sin(t*omega)/sinO;
+      const p = a.clone().multiplyScalar(s1).add(b.clone().multiplyScalar(s2));
+      pts.push(p.normalize().multiplyScalar(r));
+    }
   }
   return pts;
 }
@@ -1906,7 +1924,7 @@ function setMotionMode(mode){
     edgeGroup.visible = false;
     monthGroup.visible = false;
   }
-  if(mode === 'enlighten'){
+  if(mode === 'enlighten' || mode === 'helix'){
     monthGroup.visible = false;
   }
   if(mode === 'flow'){
@@ -2056,7 +2074,7 @@ function updateMotion(now){
   }
   else if(motion.mode === 'enlighten' || motion.mode === 'helix'){
     if(motion.pathCurve){
-      const period = (motion.mode === 'enlighten') ? 162 : 22;
+      const period = (motion.mode === 'enlighten') ? 162 : 192;
       const u = (t / period) % 1;
       const pos = motion.pathCurve.getPointAt(u);
       motion.traveler.position.copy(pos);
