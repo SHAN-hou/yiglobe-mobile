@@ -491,8 +491,17 @@ scene.fog = new THREE.FogExp2(0x05060a, 0.015);
 const camera = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, 0.1, 500);
 camera.position.set(22,14,22);
 
-const renderer = new THREE.WebGLRenderer({canvas:document.getElementById('c'),antialias:true});
-renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+const _isMobile = window.matchMedia('(max-width: 900px)').matches || ('ontouchstart' in window);
+const renderer = new THREE.WebGLRenderer({
+  canvas:document.getElementById('c'),
+  antialias: !_isMobile,
+  powerPreference: 'high-performance',
+  alpha: false,
+  stencil: false,
+  depth: true,
+  preserveDrawingBuffer: false
+});
+renderer.setPixelRatio(_isMobile ? Math.min(devicePixelRatio,1.25) : Math.min(devicePixelRatio,2));
 renderer.setSize(innerWidth,innerHeight);
 
 // CSS2D 文字渲染器
