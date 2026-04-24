@@ -1191,7 +1191,7 @@ class _SphericalCurve extends THREE.Curve {
   nowLabel.position.copy(solarNowMarker.position).addScaledVector(nowOut, 1.0);
   monthGroup.add(nowLabel);
   window._solarNowLabel = { obj: nowLabel, el: nowDiv };
-  nowDiv.addEventListener('click', e => { e.stopPropagation(); showSolarTermPopup(e); });
+  nowDiv.addEventListener('click', e => { e.stopPropagation(); _stPopupSrc='real'; showSolarTermPopup(e); });
 })();
 
 /* 高亮某卦的变爻路径 */
@@ -1242,8 +1242,16 @@ stpHead.addEventListener('pointermove', e => {
 stpHead.addEventListener('pointerup', e => { _stDrag = false; try{ stpHead.releasePointerCapture(e.pointerId); }catch(_){} });
 stpHead.addEventListener('pointercancel', () => { _stDrag = false; });
 
-function showSolarTermPopup(e){
-  const now = new Date();
+function curveTToDate(t){
+  const y = new Date().getFullYear();
+  const dongzhi = new Date(y, 11, 22);
+  const ref = (new Date() >= dongzhi) ? dongzhi : new Date(y-1, 11, 22);
+  return new Date(ref.getTime() + t * 365.25 * 86400000);
+}
+let _stPopupSrc = 'real';
+
+function showSolarTermPopup(e, customDate){
+  const now = customDate || new Date();
   const sc = getShichen(now);
   const si = getCurrentSolarTerm(now);
   const monthHex = numToNode[MONTH_SEQ[si.current.monthIdx]];
@@ -1272,10 +1280,12 @@ function showSolarTermPopup(e){
 }
 setInterval(() => {
   if(stPopup.style.display === 'block'){
-    const timeEl = stpBody.querySelector('.stp-val.gold');
-    if(timeEl){
-      const now = new Date();
-      timeEl.textContent = now.toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false});
+    const x = parseInt(stPopup.style.left)||innerWidth/2;
+    const y = parseInt(stPopup.style.top)||innerHeight/2;
+    if(_stPopupSrc === 'sim' && motion.mode === 'year' && typeof motion.yearCurveT === 'number'){
+      showSolarTermPopup({clientX:x, clientY:y, _refresh:true}, curveTToDate(motion.yearCurveT));
+    } else {
+      showSolarTermPopup({clientX:x, clientY:y, _refresh:true});
     }
   }
 }, 1000);
@@ -1355,16 +1365,28 @@ function setHotLabel(node){
   renderer.domElement.addEventListener('pointerup', e => {
     // 忽略拖动旋转（移动超过 8px 视为拖动而非点击）
     if(Math.abs(e.clientX-startX)>8 || Math.abs(e.clientY-startY)>8) return;
-    // 先检测是否点击了"当前时间"闪烁球
+    // 先检测是否点击了橙色"当前时间"球(真实时间)
     if(solarNowMarker && monthGroup.visible){
       mouse.x = (e.clientX/innerWidth)*2-1;
       mouse.y = -(e.clientY/innerHeight)*2+1;
       ray.setFromCamera(mouse, camera);
       const hits = ray.intersectObject(solarNowMarker, false);
-      if(hits.length > 0){ showSolarTermPopup(e); return; }
+      if(hits.length > 0){ _stPopupSrc='real'; showSolarTermPopup(e); return; }
       if(solarNowGlow){
         const gh = ray.intersectObject(solarNowGlow, false);
-        if(gh.length > 0){ showSolarTermPopup(e); return; }
+        if(gh.length > 0){ _stPopupSrc='real'; showSolarTermPopup(e); return; }
+      }
+    }
+    // 再检测青色"自动循环球"(模拟时间)
+    if(motion.mode === 'year' && motion.yearMarker && typeof motion.yearCurveT === 'number'){
+      mouse.x = (e.clientX/innerWidth)*2-1;
+      mouse.y = -(e.clientY/innerHeight)*2+1;
+      ray.setFromCamera(mouse, camera);
+      const h2 = ray.intersectObject(motion.yearMarker, false);
+      if(h2.length > 0){ _stPopupSrc='sim'; showSolarTermPopup(e, curveTToDate(motion.yearCurveT)); return; }
+      if(motion.yearHighlight){
+        const g2 = ray.intersectObject(motion.yearHighlight, false);
+        if(g2.length > 0){ _stPopupSrc='sim'; showSolarTermPopup(e, curveTToDate(motion.yearCurveT)); return; }
       }
     }
     const node = pickNode(e);
@@ -1755,9 +1777,10 @@ function setMotionMode(mode){
   motion.yearIdx = 0;
   motion.yearTNext = 0;
   if(mode === 'year'){
-    motion.yearMarker = makeGlowSphere(0xffffff, 0.35);
+    // 自动循环小球: 亮青色, 区别于橙色实时球
+    motion.yearMarker = makeGlowSphere(0x7fd8ff, 0.38);
     scene.add(motion.yearMarker);
-    motion.yearHighlight = makeRing(0xffe17a, 0.9);
+    motion.yearHighlight = makeRing(0x7fd8ff, 0.9);
     scene.add(motion.yearHighlight);
     // 月令循环: 仅显示 12 消息卦(小球+标签), 隐藏其他卦+连线, 禁用景深
     const monthSet = new Set(MONTH_SEQ);
@@ -1870,10 +1893,11 @@ function updateMotion(now){
         if(s.userData.num === cur.num){ s.scale.setScalar(s.userData._baseScale*2.2); s.material.opacity = 1.0; }
       });
     }
-    // 流光沿月令线匀速连续运动 (36 秒 / 圈 -> 每 3 秒经过一个月令卦)
-    const pos = monthCurveRef.getPointAt((now/36) % 1);
+    // 流光沿月令线匀速连续运动 (72 秒/圈 -> 每 3 秒经过一个节气)
+    const _yearU = (now/72) % 1;
+    motion.yearCurveT = _yearU;
+    const pos = monthCurveRef.getPointAt(_yearU);
     motion.yearMarker.position.copy(pos);
-    // 金色高亮环实时跟随月令球 (与 yearMarker 完全同步, 无延迟)
     motion.yearHighlight.position.copy(pos);
     motion.yearHighlight.lookAt(0,0,0);
     const hr = 0.85 + 0.2*Math.sin(now*4);
