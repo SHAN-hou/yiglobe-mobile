@@ -1769,10 +1769,9 @@ const motion = {
 };
 const _flowMat4 = new THREE.Matrix4();
 
-/* 登天螺旋路径: 坤 -> k=1..5 五层环绕 -> 乾 (贴球面 slerp) */
+/* 登天螺旋路径 (贴球面 slerp, 无回折) */
 function buildEnlightenWaypoints(){
   const seq = [];
-  const levelEntries = {1:24, 2:19, 3:11, 4:34, 5:43};
   const LIFT = 1.06;
   seq.push(numToNode[2]);
   for(let k=1;k<=5;k++){
@@ -1782,28 +1781,30 @@ function buildEnlightenWaypoints(){
       const tb = (b.theta % (Math.PI*2) + Math.PI*2) % (Math.PI*2);
       return ta - tb;
     });
-    const entry = numToNode[levelEntries[k]];
-    let idx = ring.findIndex(n=>n.num===entry.num);
-    if(idx<0) idx = 0;
-    ring = [...ring.slice(idx), ...ring.slice(0,idx)];
+    const prev = seq[seq.length-1];
+    let bestI = 0, bestD = Infinity;
+    for(let i=0;i<ring.length;i++){
+      const d = ring[i].pos.distanceTo(prev.pos);
+      if(d<bestD){ bestD=d; bestI=i; }
+    }
+    ring = [...ring.slice(bestI), ...ring.slice(0,bestI)];
     if(k>=4) ring = [ring[0], ...ring.slice(1).reverse()];
     ring.forEach(n => seq.push(n));
-    seq.push(entry);
   }
   seq.push(numToNode[1]);
-  const SUB = 6;
+  const SUB = 8;
   const pts = [];
+  const r = R * LIFT;
   for(let i=0;i<seq.length-1;i++){
     const a = seq[i].pos.clone().normalize();
     const b = seq[i+1].pos.clone().normalize();
     const dot = Math.max(-1, Math.min(1, a.dot(b)));
     const omega = Math.acos(dot);
-    const r = R * LIFT;
-    if(omega < 1e-4){ pts.push(a.clone().multiplyScalar(r)); continue; }
+    if(omega < 1e-4){ if(i===0) pts.push(a.clone().multiplyScalar(r)); continue; }
     const sinO = Math.sin(omega);
-    const stepCount = (i===0) ? SUB+1 : SUB;
-    for(let j=0;j<stepCount;j++){
-      const t = (i===0) ? j/SUB : (j+1)/SUB;
+    const from = (i===0) ? 0 : 1;
+    for(let j=from;j<=SUB;j++){
+      const t = j/SUB;
       const s1 = Math.sin((1-t)*omega)/sinO;
       const s2 = Math.sin(t*omega)/sinO;
       const p = a.clone().multiplyScalar(s1).add(b.clone().multiplyScalar(s2));
