@@ -5,7 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="八卦星云图" />
+<meta name="theme-color" content="#05060a" />
+<link rel="manifest" href="manifest.json" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png" />
 <title>八卦星云图 · Yi-globe 3D</title>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('service-worker.js').catch(()=>{});});}</script>
 <style>
   html,body{margin:0;height:100%;background:#05060a;color:#e8e8ef;font-family:"Microsoft YaHei","PingFang SC",serif;overflow:hidden}
   #c{width:100vw;height:100vh;display:block;touch-action:manipulation}
