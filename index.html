@@ -2160,7 +2160,7 @@ console.log('卦象分布:', nodes.map(n=>`${n.num} ${n.name} k=${n.k} ${n.onAxi
   // === 折叠/展开逻辑 ===
   const imgToggle = document.getElementById('hexImgToggle');
   let imgPanelOpen = false;
-  close.addEventListener('click', () => {
+  const doCloseImg = () => {
     panel.classList.add('collapsed');
     setTimeout(()=>{
       panel.style.display='none';
@@ -2169,7 +2169,9 @@ console.log('卦象分布:', nodes.map(n=>`${n.num} ${n.name} k=${n.k} ${n.onAxi
       imgToggle.style.display='flex';
       imgPanelOpen=false;
     },200);
-  });
+  };
+  close.addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); doCloseImg(); });
+  close.addEventListener('click', e => { e.stopPropagation(); });
   imgToggle.addEventListener('click', () => {
     imgToggle.style.display='none';
     panel.style.display='';

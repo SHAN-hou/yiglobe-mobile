@@ -151,7 +151,7 @@
   }
 
   // === Toggle ===
-  closeBtn.addEventListener('click', function(){
+  function doCloseDetail(){
     panel.classList.add('collapsed');
     setTimeout(function(){
       panel.style.display='none';
@@ -159,7 +159,9 @@
       panel.classList.remove('on','collapsed');
       toggle.style.display='flex';
     },200);
-  });
+  }
+  closeBtn.addEventListener('pointerdown', function(e){ e.stopPropagation(); e.preventDefault(); doCloseDetail(); });
+  closeBtn.addEventListener('click', function(e){ e.stopPropagation(); });
   toggle.addEventListener('click', function(){
     toggle.style.display='none';
     panel.style.display='';
