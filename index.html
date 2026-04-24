@@ -532,7 +532,12 @@ labelRenderer.setSize(innerWidth, innerHeight);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
+controls.dampingFactor = 0.12;
 controls.autoRotateSpeed = 0.5;
+controls.enablePan = false;
+controls.minDistance = 12;
+controls.maxDistance = 60;
+if(_isMobile) controls.rotateSpeed = 0.7;
 
 // 光照 (供 MeshStandardMaterial 使用)
 scene.add(new THREE.AmbientLight(0xffffff, 0.55));
@@ -546,7 +551,7 @@ scene.add(rimLight);
 /* 星空背景 */
 (function(){
   const g = new THREE.BufferGeometry();
-  const N = 1500;
+  const N = _isMobile ? 600 : 1500;
   const arr = new Float32Array(N*3);
   for(let i=0;i<N;i++){
     const r = 120 + Math.random()*80;
@@ -561,8 +566,9 @@ scene.add(rimLight);
 })();
 
 /* 球体: MeshStandardMaterial (深邃底色) + 太极 S 曲线着色叠加 */
+const _sphereSeg = _isMobile ? [48, 36] : [128, 96];
 const globe = new THREE.Mesh(
-  new THREE.SphereGeometry(R, 128, 96),
+  new THREE.SphereGeometry(R, _sphereSeg[0], _sphereSeg[1]),
   new THREE.MeshStandardMaterial({
     color:0x0b1028, roughness:0.3, metalness:0.1,
     transparent:true, opacity:0.55
@@ -663,7 +669,7 @@ const taijiMat = new THREE.ShaderMaterial({
     }
   `
 });
-const taiji = new THREE.Mesh(new THREE.SphereGeometry(R*1.002, 128, 96), taijiMat);
+const taiji = new THREE.Mesh(new THREE.SphereGeometry(R*1.002, _sphereSeg[0], _sphereSeg[1]), taijiMat);
 scene.add(taiji);
 
 /* 经纬线 (淡青色细线框) - 使用 Line2 实现可控线宽 (2x 粗) */
@@ -688,7 +694,7 @@ function makeFatLine(pts, color, opacity, linewidth){
 }
 function addCircle(lat, color=GRID_COLOR, op=0.55, lw=2){
   const r = (R*1.005)*Math.cos(lat), y = (R*1.005)*Math.sin(lat);
-  const pts=[]; const seg=256;
+  const pts=[]; const seg=_isMobile?64:256;
   for(let i=0;i<=seg;i++){
     const t = i/seg*Math.PI*2;
     pts.push(new THREE.Vector3(r*Math.cos(t), y, r*Math.sin(t)));
@@ -696,7 +702,7 @@ function addCircle(lat, color=GRID_COLOR, op=0.55, lw=2){
   gridGroup.add(makeFatLine(pts, color, op, lw));
 }
 function addMeridian(lon, color=GRID_COLOR, op=0.4, lw=2){
-  const pts=[]; const seg=128;
+  const pts=[]; const seg=_isMobile?32:128;
   for(let i=0;i<=seg;i++){
     const ph = -Math.PI/2 + i/seg*Math.PI;
     pts.push(new THREE.Vector3((R*1.005)*Math.cos(ph)*Math.cos(lon), (R*1.005)*Math.sin(ph), (R*1.005)*Math.cos(ph)*Math.sin(lon)));
@@ -1155,8 +1161,8 @@ class _SphericalCurve extends THREE.Curve {
   }
   taijiMat.uniforms.uFlip.value = -Math.sign(winding) || 1;
   // ======= 分段构建月令线: 支持前后半球差异化样式 =======
-  const SEG_N = 180;                       // 段数 (增密, 更圆润)
-  const PTS_PER_SEG = 8;                   // 每段内部采样点
+  const SEG_N = _isMobile ? 60 : 180;      // 段数 (移动端减少)
+  const PTS_PER_SEG = _isMobile ? 4 : 8;   // 每段内部采样点
   const DENSE = curve.getPoints(SEG_N * PTS_PER_SEG);  // 连续点列
   monthSegments = [];                      // 暴露给 updater
   // 共享材质 (前面: 亮金实线 + 暖光晕; 背面: 低亮度灰色虚线)
@@ -1174,8 +1180,9 @@ class _SphericalCurve extends THREE.Curve {
     }
     const segCurve = new THREE.CatmullRomCurve3(segPts, false, 'centripetal', 0.5);
     // 仅取对应本段的参数范围
-    const coreGeo = new THREE.TubeGeometry(segCurve, 10, 0.045, 12, false);
-    const haloGeo = new THREE.TubeGeometry(segCurve, 10, 0.13, 12, false);
+    const _tubeSeg = _isMobile ? 4 : 10, _tubeRad = _isMobile ? 4 : 12;
+    const coreGeo = new THREE.TubeGeometry(segCurve, _tubeSeg, 0.045, _tubeRad, false);
+    const haloGeo = new THREE.TubeGeometry(segCurve, _tubeSeg, 0.13, _tubeRad, false);
     const core = new THREE.Mesh(coreGeo, matFrontCore);
     const halo = new THREE.Mesh(haloGeo, matFrontHalo);
     core.renderOrder = 999;
@@ -1669,7 +1676,7 @@ function updateLabels(){
       const op = THREE.MathUtils.lerp(1.0, 0.3, t);
       const blur = t*2.0;
       L.el.style.opacity = op.toFixed(3);
-      L.el.style.filter = blur>0.15 ? `blur(${blur.toFixed(2)}px)` : 'none';
+      L.el.style.filter = (!_isMobile && blur>0.15) ? `blur(${blur.toFixed(2)}px)` : 'none';
     }
   }
   // 月令循环: 月份标签也应用相同的距离景深透明度
@@ -1812,7 +1819,7 @@ function buildEnlightenWaypoints(){
     }
   }
   const tempCurve = new THREE.CatmullRomCurve3(raw, false, 'catmullrom', 0.3);
-  const SAMPLES = 2048;
+  const SAMPLES = _isMobile ? 512 : 2048;
   const pts = [];
   for(let i=0;i<=SAMPLES;i++){
     const p = tempCurve.getPointAt(i/SAMPLES);
