@@ -1792,15 +1792,15 @@ function buildEnlightenWaypoints(){
     ring.forEach(n => seq.push(n));
   }
   seq.push(numToNode[1]);
-  const SUB = 8;
-  const pts = [];
+  const SUB = 16;
   const r = R * LIFT;
+  const raw = [];
   for(let i=0;i<seq.length-1;i++){
     const a = seq[i].pos.clone().normalize();
     const b = seq[i+1].pos.clone().normalize();
     const dot = Math.max(-1, Math.min(1, a.dot(b)));
     const omega = Math.acos(dot);
-    if(omega < 1e-4){ if(i===0) pts.push(a.clone().multiplyScalar(r)); continue; }
+    if(omega < 1e-4){ if(i===0) raw.push(a.clone().multiplyScalar(r)); continue; }
     const sinO = Math.sin(omega);
     const from = (i===0) ? 0 : 1;
     for(let j=from;j<=SUB;j++){
@@ -1808,8 +1808,15 @@ function buildEnlightenWaypoints(){
       const s1 = Math.sin((1-t)*omega)/sinO;
       const s2 = Math.sin(t*omega)/sinO;
       const p = a.clone().multiplyScalar(s1).add(b.clone().multiplyScalar(s2));
-      pts.push(p.normalize().multiplyScalar(r));
+      raw.push(p.normalize().multiplyScalar(r));
     }
+  }
+  const tempCurve = new THREE.CatmullRomCurve3(raw, false, 'catmullrom', 0.3);
+  const SAMPLES = 2048;
+  const pts = [];
+  for(let i=0;i<=SAMPLES;i++){
+    const p = tempCurve.getPointAt(i/SAMPLES);
+    pts.push(p.normalize().multiplyScalar(r));
   }
   return pts;
 }
