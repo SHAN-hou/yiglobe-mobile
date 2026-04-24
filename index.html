@@ -158,6 +158,14 @@
   @media (max-width: 480px){
     #hud{font-size:11px}
   }
+  /* 手机横屏：图标往里收，避开刘海屏 */
+  @media (max-width: 960px) and (orientation: landscape){
+    #hudToggle{left:max(env(safe-area-inset-left,20px),48px)!important}
+    #hud{left:max(env(safe-area-inset-left,20px),48px)!important}
+    #hexDetailToggle{right:calc(max(env(safe-area-inset-right,12px),48px) + 44px + 4px + 44px + 4px)!important}
+    #hexImgToggle{right:calc(max(env(safe-area-inset-right,12px),48px) + 44px + 4px)!important}
+    #modeInfoToggle{right:max(env(safe-area-inset-right,12px),48px)!important}
+  }
   /* 手机竖屏专用：五元素同顶行  易 | 搜索 | 卦 | 详 | ⓘ */
   @media (max-width: 768px) and (orientation: portrait){
     #hudToggle{top:10px!important;left:8px!important;transform:none!important;width:32px!important;height:32px!important;font-size:14px!important}
