@@ -1769,15 +1769,14 @@ const motion = {
 };
 const _flowMat4 = new THREE.Matrix4();
 
-/* 登天螺旋路径: 坤 -> k=1..5 五层环绕 -> 乾 (参见 pdf 图 7.04/7.05) */
+/* 登天螺旋路径: 坤 -> k=1..5 五层环绕 -> 乾 (贴球面 slerp) */
 function buildEnlightenWaypoints(){
-  const pts = [];
+  const seq = [];
   const levelEntries = {1:24, 2:19, 3:11, 4:34, 5:43};
-  const LIFT = 1.08; // 稍微离开球面
-  pts.push(numToNode[2].pos.clone().multiplyScalar(LIFT));
+  const LIFT = 1.06;
+  seq.push(numToNode[2]);
   for(let k=1;k<=5;k++){
     let ring = nodes.filter(n => n.k===k && !n.onAxis).slice();
-    // 按经度 theta 排序
     ring.sort((a,b)=>{
       const ta = (a.theta % (Math.PI*2) + Math.PI*2) % (Math.PI*2);
       const tb = (b.theta % (Math.PI*2) + Math.PI*2) % (Math.PI*2);
@@ -1787,13 +1786,30 @@ function buildEnlightenWaypoints(){
     let idx = ring.findIndex(n=>n.num===entry.num);
     if(idx<0) idx = 0;
     ring = [...ring.slice(idx), ...ring.slice(0,idx)];
-    // k=4,5 逆向 (pdf: 上半球相反方向)
     if(k>=4) ring = [ring[0], ...ring.slice(1).reverse()];
-    ring.forEach(n => pts.push(n.pos.clone().multiplyScalar(LIFT)));
-    // 回到入口完成该层闭合, 然后上升到下层入口前再加一个稍高的过渡点
-    pts.push(entry.pos.clone().multiplyScalar(LIFT));
+    ring.forEach(n => seq.push(n));
+    seq.push(entry);
   }
-  pts.push(numToNode[1].pos.clone().multiplyScalar(LIFT));
+  seq.push(numToNode[1]);
+  const SUB = 6;
+  const pts = [];
+  for(let i=0;i<seq.length-1;i++){
+    const a = seq[i].pos.clone().normalize();
+    const b = seq[i+1].pos.clone().normalize();
+    const dot = Math.max(-1, Math.min(1, a.dot(b)));
+    const omega = Math.acos(dot);
+    const r = R * LIFT;
+    if(omega < 1e-4){ pts.push(a.clone().multiplyScalar(r)); continue; }
+    const sinO = Math.sin(omega);
+    const stepCount = (i===0) ? SUB+1 : SUB;
+    for(let j=0;j<stepCount;j++){
+      const t = (i===0) ? j/SUB : (j+1)/SUB;
+      const s1 = Math.sin((1-t)*omega)/sinO;
+      const s2 = Math.sin(t*omega)/sinO;
+      const p = a.clone().multiplyScalar(s1).add(b.clone().multiplyScalar(s2));
+      pts.push(p.normalize().multiplyScalar(r));
+    }
+  }
   return pts;
 }
 
@@ -1886,8 +1902,10 @@ function setMotionMode(mode){
     monthGroup.visible = true;
   }
   if(mode === 'orbit'){
-    // orbit 模式下隐藏变爻连线 / 月令线 (否则会断裂)
     edgeGroup.visible = false;
+    monthGroup.visible = false;
+  }
+  if(mode === 'enlighten'){
     monthGroup.visible = false;
   }
   if(mode === 'flow'){
@@ -2037,7 +2055,7 @@ function updateMotion(now){
   }
   else if(motion.mode === 'enlighten' || motion.mode === 'helix'){
     if(motion.pathCurve){
-      const period = (motion.mode === 'enlighten') ? 40 : 22; // 秒 (enlighten 较长)
+      const period = (motion.mode === 'enlighten') ? 162 : 22;
       const u = (t / period) % 1;
       const pos = motion.pathCurve.getPointAt(u);
       motion.traveler.position.copy(pos);
